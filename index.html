@@ -1,0 +1,239 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrendAI Crypto | AI Market</title>
+<style>
+:root{--bg:#07111f;--panel:#101f32;--line:#263b52;--green:#38e8b2;--red:#ff657d;--text:#f4f7fb;--muted:#9aacbf}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{padding:25px 6%;background:#0b192b;border-bottom:1px solid var(--line)}
+.logo{font-size:28px;font-weight:bold;color:var(--green)}
+header p{color:var(--muted)}
+main{max-width:1150px;margin:auto;padding:25px 16px}
+h2{font-size:21px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:18px}
+.label{color:var(--muted);font-size:13px}
+.value{font-size:24px;font-weight:bold;margin-top:12px;overflow-wrap:anywhere}
+.green{color:var(--green)}.red{color:var(--red)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}
+input,select,button{padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text)}
+input{flex:1;min-width:160px}
+button{cursor:pointer;background:var(--green);color:#06151b;font-weight:bold;border:0}
+.tablebox{overflow-x:auto}
+table{width:100%;min-width:570px;border-collapse:collapse}
+th,td{text-align:right;padding:14px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted)}
+.analysis{line-height:1.9;margin-top:18px}
+.small{color:var(--muted);font-size:12px}
+.coinname{font-weight:bold}
+footer{text-align:center;color:var(--muted);padding:28px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✦ TrendAI Crypto</div>
+  <p>الذكاء الاصطناعي وتحليل سوق العملات الرقمية</p>
+  <span class="small">LIVE MARKET • CRYPTO ANALYTICS</span>
+</header>
+
+<main>
+  <h2>📊 نظرة عامة على السوق</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="label">العملات المعروضة</div>
+      <div class="value" id="count">--</div>
+    </div>
+    <div class="card">
+      <div class="label">أقوى ارتفاع خلال 24 ساعة</div>
+      <div class="value green" id="winner">--</div>
+    </div>
+    <div class="card">
+      <div class="label">أقوى انخفاض خلال 24 ساعة</div>
+      <div class="value red" id="loser">--</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <input id="search" placeholder="🔎 ابحث عن Bitcoin أو Ethereum...">
+    <select id="currency">
+      <option value="usd">USD — الدولار</option>
+      <option value="eur">EUR — اليورو</option>
+      <option value="mad">MAD — الدرهم المغربي</option>
+    </select>
+    <select id="sort">
+      <option value="cap">حسب القيمة السوقية</option>
+      <option value="up">الأكثر ارتفاعاً</option>
+      <option value="down">الأكثر انخفاضاً</option>
+    </select>
+    <button id="refresh">تحديث الأسعار ↻</button>
+  </div>
+
+  <section class="panel">
+    <h3>🤖 TrendAI Market Assistant</h3>
+    <div id="analysis" class="analysis">
+      جاري الاتصال ببيانات السوق...
+    </div>
+    <p class="small">التحليل آلي اعتماداً على بيانات الأسعار، وليس تنبؤاً مضموناً.</p>
+  </section>
+
+  <h2>🔥 العملات الرقمية الرائجة</h2>
+  <div class="panel tablebox">
+    <table>
+      <thead>
+        <tr><th>العملة</th><th>السعر</th><th>التغيير 24h</th><th>الاتجاه</th></tr>
+      </thead>
+      <tbody id="coins">
+        <tr><td colspan="4">جاري تحميل البيانات...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small" id="updated">مصدر البيانات: CoinGecko</p>
+
+  <section class="panel analysis">
+    <h3>🧠 كيف تقرأ التحليل؟</h3>
+    <p>📈 صاعد: ارتفع السعر بأكثر من 2% خلال 24 ساعة.</p>
+    <p>📉 هابط: انخفض السعر بأكثر من 2% خلال 24 ساعة.</p>
+    <p>↔️ مستقر نسبياً: التغيير بين -2% و+2%.</p>
+    <p class="small">هاد التصنيفات كتصف التغيير السابق، وما كتضمنش شنو غادي يوقع من بعد.</p>
+  </section>
+</main>
+
+<footer>TrendAI Crypto © 2026 — مشروع لتحليل السوق</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let data = [];
+let loading = false;
+
+function price(n){
+  if(n == null) return "غير متوفر";
+  return new Intl.NumberFormat("en-US",{
+    style:"currency",
+    currency:$("currency").value.toUpperCase(),
+    maximumSignificantDigits:7
+  }).format(n);
+}
+
+function pct(n){
+  if(n == null) return "--";
+  return (n > 0 ? "+" : "") + n.toFixed(2) + "%";
+}
+
+function direction(n){
+  if(n == null) return ["غير معروف",""];
+  if(n > 2) return ["صاعد 📈","green"];
+  if(n < -2) return ["هابط 📉","red"];
+  return ["مستقر نسبياً ↔",""];
+}
+
+async function load(){
+  if(loading) return;
+  loading = true;
+  $("refresh").disabled = true;
+  $("analysis").textContent = "كنحدّث بيانات السوق...";
+  try{
+    const currency = $("currency").value;
+    const url = "https://api.coingecko.com/api/v3/coins/markets"
+      + "?vs_currency=" + currency
+      + "&order=market_cap_desc&per_page=50&page=1"
+      + "&sparkline=false&price_change_percentage=24h";
+
+    const response = await fetch(url);
+    if(!response.ok) throw new Error("Market API unavailable");
+    const result = await response.json();
+    if(!Array.isArray(result)) throw new Error("Invalid data");
+    data = result;
+    render();
+    $("updated").textContent =
+      "آخر تحديث ناجح: " + new Date().toLocaleString()
+      + " | المصدر: CoinGecko";
+  }catch(error){
+    $("analysis").textContent =
+      "ما قدرناش نجيبو الأسعار دابا. تأكد من الإنترنت، "
+      + "وحاول من جديد من بعد. ممكن كذلك يكون حدّ استعمال API وصل.";
+    if(!data.length){
+      $("coins").innerHTML =
+        '<tr><td colspan="4">البيانات غير متاحة مؤقتاً.</td></tr>';
+    }
+  }finally{
+    loading = false;
+    $("refresh").disabled = false;
+  }
+}
+
+function render(){
+  const query = $("search").value.trim().toLowerCase();
+  const change = c => c.price_change_percentage_24h;
+
+  $("count").textContent = data.length;
+
+  const valid = data.filter(c => Number.isFinite(change(c)));
+  const sorted = [...valid].sort((a,b)=>change(b)-change(a));
+
+  $("winner").textContent = sorted.length
+    ? sorted[0].symbol.toUpperCase() + " " + pct(change(sorted[0]))
+    : "--";
+
+  $("loser").textContent = sorted.length
+    ? sorted[sorted.length-1].symbol.toUpperCase()
+      + " " + pct(change(sorted[sorted.length-1]))
+    : "--";
+
+  const rises = valid.filter(c=>change(c)>0).length;
+  let marketText = "ما كايناش بيانات كافية لتحليل السوق.";
+
+  if(valid.length){
+    if(rises > valid.length/2){
+      marketText = "السوق المعروض كيميل للإيجابية: "
+        + rises + " من " + valid.length
+        + " عملة عندها تغيير موجب خلال 24 ساعة.";
+    }else if(rises < valid.length/2){
+      marketText = "السوق المعروض كيميل للسلبية: "
+        + (valid.length-rises) + " من " + valid.length
+        + " عملة عندها تغيير سالب أو غير موجب خلال 24 ساعة.";
+    }else{
+      marketText = "حركة السوق متباينة، وما كاينش اتجاه واضح عند أغلبية العملات.";
+    }
+    marketText += " هادشي وصف للبيانات السابقة، ماشي توقع للمستقبل.";
+  }
+  $("analysis").textContent = marketText;
+
+  let list = data.filter(c =>
+    c.name.toLowerCase().includes(query) ||
+    c.symbol.toLowerCase().includes(query)
+  );
+
+  if($("sort").value === "up"){
+    list.sort((a,b)=>(change(b)??-Infinity)-(change(a)??-Infinity));
+  }else if($("sort").value === "down"){
+    list.sort((a,b)=>(change(a)??Infinity)-(change(b)??Infinity));
+  }
+
+  $("coins").innerHTML = list.map(c=>{
+    const n = change(c);
+    const d = direction(n);
+    const cls = n>0 ? "green" : n<0 ? "red" : "";
+    return `<tr>
+      <td><span class="coinname">${c.name}</span><br>
+      <span class="small">${c.symbol.toUpperCase()}</span></td>
+      <td>${price(c.current_price)}</td>
+      <td class="${cls}">${pct(n)}</td>
+      <td class="${d[1]}">${d[0]}</td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="4">ما لقينا حتى عملة بهاد الاسم.</td></tr>';
+}
+
+$("search").addEventListener("input",render);
+$("sort").addEventListener("change",render);
+$("currency").addEventListener("change",load);
+$("refresh").addEventListener("click",load);
+
+load();
+setInterval(load,120000);
+</script>
+</body>
+</html>
