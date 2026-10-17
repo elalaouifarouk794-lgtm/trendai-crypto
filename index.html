@@ -243,6 +243,45 @@ $("refresh").addEventListener("click",load);
 
 load();
 setInterval(load,120000);
+
+document.getElementById("askAI").addEventListener("click", async () => {
+  const questionBox = document.getElementById("aiQuestion");
+  const answerBox = document.getElementById("aiAnswer");
+  const button = document.getElementById("askAI");
+  const question = questionBox.value.trim();
+
+  if (!question) {
+    answerBox.textContent = "كتب السؤال ديالك أولاً.";
+    return;
+  }
+
+  button.disabled = true;
+  answerBox.textContent = "AI كيوجد الجواب...";
+
+  try {
+    const response = await fetch(
+      "https://trendai-helper.elalaouifarouk794.workers.dev/api/ask",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "وقع خطأ فالطلب.");
+    }
+
+    answerBox.textContent = data.answer || "ما توصلناش بجواب.";
+  } catch (error) {
+    answerBox.textContent =
+      "ما قدرناش نتاصلو بالـ AI. تأكد أن Worker منشور وأن Gemini API خدام.";
+  } finally {
+    button.disabled = false;
+  }
+});
 </script>
 </body>
 </html>
