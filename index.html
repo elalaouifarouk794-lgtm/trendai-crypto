@@ -237,3 +237,141 @@ setInterval(load,120000);
 </script>
 </body>
 </html>
+
+<!-- TrendAI Trading Simulator -->
+<section id="trading-bot" style="max-width:1100px;margin:30px auto;padding:20px;background:#101f32;color:#f4f7fb;border:1px solid #263b52;border-radius:16px;font-family:Arial,sans-serif">
+  <h2 style="color:#38e8b2">🤖 TrendAI Trading Bot</h2>
+  <p>روبوت تجريبي كيراقب السوق وكيجرّب صفقات افتراضية بلا أموال حقيقية.</p>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <div style="padding:15px;background:#07111f;border-radius:10px;flex:1;min-width:130px">
+      <small>الرصيد الافتراضي</small>
+      <h2><span id="bot-balance">1000.00</span> USDT</h2>
+    </div>
+    <div style="padding:15px;background:#07111f;border-radius:10px;flex:1;min-width:130px">
+      <small>الصفقات الافتراضية</small>
+      <h2 id="bot-trades">0</h2>
+    </div>
+  </div>
+
+  <p style="margin-top:20px">اختار العملة:</p>
+  <select id="bot-coin" style="padding:10px;border-radius:8px">
+    <option value="bitcoin">Bitcoin (BTC)</option>
+    <option value="ethereum">Ethereum (ETH)</option>
+    <option value="solana">Solana (SOL)</option>
+  </select>
+
+  <p>
+    <button id="bot-analyze" style="padding:12px;background:#38e8b2;border:0;border-radius:8px;cursor:pointer;font-weight:bold">
+      🔍 حلّل السوق
+    </button>
+    <button id="bot-buy" style="padding:12px;background:#193e35;color:white;border:1px solid #38e8b2;border-radius:8px;cursor:pointer">
+      شراء افتراضي بـ 50 USDT
+    </button>
+    <button id="bot-sell" style="padding:12px;background:#442331;color:white;border:1px solid #ff657d;border-radius:8px;cursor:pointer">
+      بيع افتراضي
+    </button>
+  </p>
+
+  <div id="bot-result" style="padding:15px;background:#07111f;border-radius:10px;line-height:1.8">
+    اضغط على «حلّل السوق» لتحميل البيانات.
+  </div>
+  <h3>📒 سجل الصفقات التجريبية</h3>
+  <div id="bot-history">مازال ما كايناش صفقات.</div>
+  <p style="color:#9aacbf;font-size:12px">محاكي فقط: لا يتصل بمحفظة ولا ينفذ أوامر حقيقية. التحليل لا يضمن اتجاه السعر.</p>
+</section>
+
+<script>
+(function(){
+  let balance=1000, trades=0, holdings={}, history=[];
+  let lastCoin=null, lastPrice=null, lastChange=null;
+  const el=id=>document.getElementById(id);
+
+  function showBalance(){
+    el("bot-balance").textContent=balance.toFixed(2);
+    el("bot-trades").textContent=trades;
+  }
+
+  async function analyze(){
+    const coin=el("bot-coin").value;
+    el("bot-result").textContent="كنحمّلو بيانات السوق...";
+    try{
+      const r=await fetch(
+        "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids="
+        +coin+"&price_change_percentage=24h"
+      );
+      if(!r.ok) throw Error("API unavailable");
+      const a=await r.json();
+      if(!a.length) throw Error("No data");
+      const c=a[0];
+      lastCoin=coin;
+      lastPrice=c.current_price;
+      lastChange=c.price_change_percentage_24h;
+
+      let direction="حركة غير واضحة ↔";
+      if(lastChange>2) direction="اتجاه صاعد 📈";
+      if(lastChange< -2) direction="اتجاه هابط 📉";
+
+      el("bot-result").innerHTML=
+        "<b>"+c.name+" ("+c.symbol.toUpperCase()+")</b><br>"+
+        "السعر الحالي: $"+lastPrice.toLocaleString("en-US")+
+        "<br>التغيير خلال 24 ساعة: "+
+        (lastChange==null?"غير متوفر":lastChange.toFixed(2)+"%")+
+        "<br>القراءة الآلية: <b>"+direction+"</b>"+
+        "<br><small>هاد التحليل مبني على تغيّر السعر السابق، ماشي توقع مضمون للمستقبل.</small>";
+    }catch(e){
+      el("bot-result").textContent=
+        "تعذّر تحميل البيانات. تأكد من الإنترنت وحاول لاحقاً.";
+    }
+  }
+
+  function record(msg){
+    trades++;
+    history.unshift(msg);
+    el("bot-history").innerHTML=history.slice(0,10)
+      .map(x=>"<p>"+x+"</p>").join("");
+    showBalance();
+  }
+
+  el("bot-analyze").addEventListener("click",analyze);
+
+  el("bot-coin").addEventListener("change",()=>{
+    lastCoin=null;lastPrice=null;lastChange=null;
+  });
+
+  el("bot-buy").addEventListener("click",()=>{
+    if(lastCoin!==el("bot-coin").value || lastPrice==null){
+      el("bot-result").textContent="حلّل العملة أولاً قبل الشراء الافتراضي.";
+      return;
+    }
+    if(balance<50){
+      el("bot-result").textContent="الرصيد الافتراضي ما كافيش.";
+      return;
+    }
+    balance-=50;
+    const coin=lastCoin;
+    holdings[coin]=(holdings[coin]||0)+50/lastPrice;
+    record("شراء افتراضي: 50 USDT من "+coin+
+      " بسعر $"+lastPrice.toLocaleString("en-US"));
+  });
+
+  el("bot-sell").addEventListener("click",()=>{
+    if(lastCoin!==el("bot-coin").value || lastPrice==null){
+      el("bot-result").textContent="حلّل العملة أولاً قبل البيع الافتراضي.";
+      return;
+    }
+    const qty=holdings[lastCoin]||0;
+    if(qty<=0){
+      el("bot-result").textContent="ما عندك حتى كمية من هاد العملة فالمحفظة الافتراضية.";
+      return;
+    }
+    const proceeds=qty*lastPrice;
+    balance+=proceeds;
+    record("بيع افتراضي: "+lastCoin+" مقابل "+
+      proceeds.toFixed(2)+" USDT");
+    delete holdings[lastCoin];
+  });
+
+  showBalance();
+})();
+</script>
